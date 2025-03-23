@@ -25,4 +25,31 @@ const addUser = function (req, res) {
     }
 };
 
-module.exports = { getUsers, addUser };
+
+const updateUser = (req, res) => {
+    try {
+        const { email } = req.params;
+        const { firstName, lastName, password, phone, bio, role } = req.body;
+
+        const findIndex = users.findIndex(user => user.email === email);
+        if (findIndex !== -1) {
+            const updatedUser = { 
+                firstName: firstName || users[findIndex].firstName, 
+                lastName: lastName || users[findIndex].lastName, 
+                email, 
+                password: password || users[findIndex].password,
+                phone: phone || users[findIndex].phone,
+                bio: bio || users[findIndex].bio,
+                role: role || users[findIndex].role
+            };
+            users[findIndex] = updatedUser;
+            return res.status(200).json({ message: "User Updated Successfully..." });
+        }
+        return res.status(400).json({ message: "User Not Found!" });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+};
+
+
+module.exports = { getUsers, addUser, updateUser };
