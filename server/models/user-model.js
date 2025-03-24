@@ -30,7 +30,12 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ["Individual","Organization"],
         required: true
-    }
+    },
+    trustScore: {
+         type: Number,
+         default: 0
+     },
+    swapHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Food' }],
 },{timestamps: true})
 
 module.exports = mongoose.model("User", UserSchema);
