@@ -17,6 +17,11 @@ const FoodSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    listedBy: {
+         type: mongoose.Schema.Types.ObjectId,
+         ref: 'User',
+         required: true
+     },
     availability: {
         type: Boolean,
         required: true

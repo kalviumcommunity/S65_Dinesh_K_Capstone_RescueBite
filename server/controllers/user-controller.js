@@ -1,55 +1,86 @@
-const users = require('../userData');
+const User = require('../models/user-model');
+const Food = require('../models/food-model');
 
-const getUsers = function (req, res) {
-    try {
-        res.status(200).json({ userDetails: users });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
+const createUser = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, phone, bio, role } = req.body;
+    
+    const newUser = new User({
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      bio,
+      role
+    });
 
-const addUser = function (req, res) {
-    try {
-        const { firstName, lastName, email, password, phone, bio, role } = req.body;
-
-        if (!firstName || !lastName || !email || !password || !phone || !bio || !role) {
-            return res.status(400).json({ message: "All fields are required" });
-        }
-
-        const newUser = { firstName, lastName, email, password, phone, bio, role };
-        users.push(newUser);
-
-        res.status(201).json({ message: "User added successfully", user: newUser });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    const savedUser = await newUser.save();
+    res.status(201).json(savedUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating user', error: error.message });
+  }
 };
 
 
-const updateUser = (req, res) => {
-    try {
-        const { email } = req.params;
-        const { firstName, lastName, password, phone, bio, role } = req.body;
-
-        const findIndex = users.findIndex(user => user.email === email);
-        if (findIndex !== -1) {
-            const updatedUser = { 
-                firstName: firstName || users[findIndex].firstName, 
-                lastName: lastName || users[findIndex].lastName, 
-                email, 
-                password: password || users[findIndex].password,
-                phone: phone || users[findIndex].phone,
-                bio: bio || users[findIndex].bio,
-                role: role || users[findIndex].role
-            };
-            users[findIndex] = updatedUser;
-            return res.status(200).json({ message: "User Updated Successfully..." });
-        }
-        return res.status(400).json({ message: "User Not Found!" });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
-    }
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().populate('swapHistory', 'name quantity description price');
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching users', error: error.message });
+  }
 };
 
 
-module.exports = { getUsers, addUser, updateUser };
+const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).populate('swapHistory', 'name quantity description price');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user', error: error.message });
+  }
+};
+
+
+const updateUser = async (req, res) => {
+  try {
+    const { firstName, lastName, phone, bio, swapHistory } = req.body;
+
+   
+    if (swapHistory) {
+      const foods = await Food.find({ _id: { $in: swapHistory } });
+      if (foods.length !== swapHistory.length) {
+        return res.status(400).json({ message: 'Some food items in swapHistory do not exist' });
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { firstName, lastName, phone, bio, swapHistory },
+      { new: true }
+    ).populate('swapHistory', 'name quantity description price');
+
+    if (!updatedUser) return res.status(404).json({ message: 'User not found' });
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user', error: error.message });
+  }
+};
+
+
+const deleteUser = async (req, res) => {
+  try {
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    if (!deletedUser) return res.status(404).json({ message: 'User not found' });
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting user', error: error.message });
+  }
+};
+
+module.exports = { createUser, getAllUsers, getUserById, updateUser, deleteUser };
