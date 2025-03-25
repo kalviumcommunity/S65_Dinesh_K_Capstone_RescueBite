@@ -1,9 +1,10 @@
 const User = require('../models/user-model');
 const Food = require('../models/food-model');
+const bcrypt = require('bcryptjs')
 
 const createUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone, bio, role } = req.body;
+    const { firstName, lastName, email, password, phone, bio, address, role } = req.body;
     
     const newUser = new User({
       firstName,
@@ -12,6 +13,7 @@ const createUser = async (req, res) => {
       password,
       phone,
       bio,
+      address,
       role
     });
 
@@ -22,6 +24,29 @@ const createUser = async (req, res) => {
   }
 };
 
+const loginUser = async (req, res) => {
+  try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+          return res.status(400).json({ message: "All fields are required" });
+      }
+
+      const user = await User.findOne({ email });
+      if (!user) {
+          return res.status(400).json({ message: "Invalid email or password" });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+          return res.status(400).json({ message: "Invalid email or password" });
+      }
+
+      res.status(200).json({ message: "Login successful" });
+  } catch (error) {
+      res.status(500).json({ message: "Error logging in", error });
+  }
+};
 
 const getAllUsers = async (req, res) => {
   try {
@@ -83,4 +108,4 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { createUser, getAllUsers, getUserById, updateUser, deleteUser };
+module.exports = { createUser, getAllUsers, getUserById, updateUser, deleteUser, loginUser };
