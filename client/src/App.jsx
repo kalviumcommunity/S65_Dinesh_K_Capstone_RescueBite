@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
-import LandingPage from "./pages/landiing-page"
+import LandingPage from "./pages/landing-page"
+import AuthPage from "./pages/auth-page"
 
 const App = () => {
   return (
@@ -7,6 +8,8 @@ const App = () => {
       <Routes>
 
       <Route path="/" element={<LandingPage />} />
+      <Route path="/auth/signup" element={<AuthPage />} />
+      <Route path="/auth/login" element={<AuthPage />} />
 
       </Routes>
 
