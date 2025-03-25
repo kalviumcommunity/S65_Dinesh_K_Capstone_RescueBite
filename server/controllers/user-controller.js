@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 
 const createUser = async (req, res) => {
-  try {
+  try { 
     const { firstName, lastName, email, password, phone, bio, address, role } = req.body;
     
    

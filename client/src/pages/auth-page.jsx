@@ -91,18 +91,19 @@ export default function AuthForms() {
         try {
             const response = await axios.post(`${API_BASE_URL}/login`, {
                 email,
-                password,
-                accountType: userType === "owner" ? "organization" : "individual"
+                password
             });
 
-            localStorage.setItem("token", response.data.token);
-            axios.defaults.headers.common["x-auth-token"] = response.data.token;
-
+            const { token, user } = response.data;
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(user));
             
+            // Set default auth header for future requests
+            axios.defaults.headers.common["x-auth-token"] = token;
+
             alert("Welcome back!");
-
             
-            if (response.data.user.accountType === "individual") {
+            if (user.role === "Individual") {
                 navigate("/customer");
             } else {
                 navigate("/restaurant");
@@ -129,22 +130,19 @@ export default function AuthForms() {
                 phone,
                 bio,
                 address,
-                accountType: userType === "owner" ? "organization" : "individual"
+                role: userType === "owner" ? "Organization" : "Individual"
             };
 
-            if (userType === "owner") {
-                userData.businessName = `${firstName} ${lastName}'s Business`;
-                userData.businessType = "restaurant";
-                userData.businessAddress = address;
-            }
-
             const response = await axios.post(`${API_BASE_URL}/register`, userData);
+            const { token, user } = response.data;
 
-            localStorage.setItem("token", response.data.token);
-            axios.defaults.headers.common["x-auth-token"] = response.data.token;
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(user));
+            
+            // Set default auth header for future requests
+            axios.defaults.headers.common["x-auth-token"] = token;
 
-           
-            if (response.data.user.accountType === "individual") {
+            if (user.role === "Individual") {
                 navigate("/customer");
             } else {
                 navigate("/restaurant");
