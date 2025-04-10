@@ -2,12 +2,12 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user-model");
 const bcrypt = require("bcryptjs");
 
-// Register a new user
+
 const register = async (req, res) => {
   try {
     const { email } = req.body;
 
-    // Check if user already exists
+   
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -16,11 +16,11 @@ const register = async (req, res) => {
       });
     }
 
-    // Create new user
+   
     const user = new User(req.body);
     await user.save();
 
-    // Generate JWT token
+   
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(201).json({
@@ -44,12 +44,12 @@ const register = async (req, res) => {
   }
 };
 
-// Login user
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Find user
+  
     const user = await User.findOne({ email });
     
     if (!user) {
@@ -59,7 +59,7 @@ const login = async (req, res) => {
       });
     }
     
-    // Check password
+   
     const isMatch = await user.comparePassword(password);
     
     if (!isMatch) {
@@ -69,13 +69,13 @@ const login = async (req, res) => {
       });
     }
     
-    // Create JWT payload
+   
     const payload = {
       id: user._id,
       accountType: user.accountType || 'individual' // Ensure account type is included
     };
     
-    // Sign token
+   
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
@@ -107,10 +107,10 @@ const login = async (req, res) => {
   }
 };
 
-// Get current user
+
 const getCurrentUser = async (req, res) => {
   try {
-    // Get token from header
+  
     const token = req.header("x-auth-token");
     if (!token) {
       return res.status(401).json({
@@ -119,10 +119,10 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
-    // Verify token
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Find user by id
+   
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(404).json({

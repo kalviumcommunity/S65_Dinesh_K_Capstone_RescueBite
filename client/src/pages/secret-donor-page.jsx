@@ -107,7 +107,7 @@ export default function SecretDonorPage() {
         try {
             setLoading(true);
             
-            // No need to convert since we're already using INR
+         
             const { data } = await axios.post(
                 `${API_BASE_URL}/api/pay/checkout`,
                 { total: finalAmount }
@@ -118,7 +118,7 @@ export default function SecretDonorPage() {
             }
             
             const options = {
-                key: "rzp_test_Lvyx7TybXsDiFV", // Replace with your actual key in production
+                key: "rzp_test_Lvyx7TybXsDiFV", 
                 amount: data.order.amount,
                 currency: "INR",
                 name: "Rescue Bite",
@@ -128,13 +128,13 @@ export default function SecretDonorPage() {
                 handler: function (response) {
                     console.log("Razorpay response:", response);
                     
-                    // Create a donation record
+                 
                     const token = localStorage.getItem("token");
                     const donationData = {
                         donor: token ? undefined : null, 
                         isAnonymous: !token,
                         amount: finalAmount,
-                        currency: "INR", // Make sure this is INR
+                        currency: "INR", 
                         paymentMethod: "credit_card",
                         paymentId: response.razorpay_payment_id,
                         frequency: donationFrequency,
@@ -144,7 +144,7 @@ export default function SecretDonorPage() {
                         razorpay_signature: response.razorpay_signature
                     };
                     
-                    // Send the donation to the server
+                   
                     axios.post(
                         `${API_BASE_URL}/api/donations`, 
                         donationData,
@@ -160,7 +160,7 @@ export default function SecretDonorPage() {
                         setCustomAmount("");
                         setDonationFrequency("one-time");
                         
-                        // Show success page or redirect
+                      
                         navigate("/donor?success=true");
                     })
                     .catch((err) => {
