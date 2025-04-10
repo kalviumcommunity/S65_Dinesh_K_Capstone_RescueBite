@@ -9,10 +9,10 @@ import {
     LogOut,
     Bell,
     ShoppingBag,
-    Heart,
     Settings,
     Building2,
     Gift,
+    Heart,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -26,12 +26,18 @@ export default function DashboardLayout({ userType = "customer" }) {
     const [acceptedSwaps, setAcceptedSwaps] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
     const { user } = useAuth();
+    const [viewedNotifications, setViewedNotifications] = useState({
+        pendingRequests: 0,
+        acceptedSwaps: 0,
+        pendingReviews: 0
+    });
+    const [pendingReviews, setPendingReviews] = useState([]);
 
     const customerNavItems = [
         { href: "/customer", icon: Home },
         { href: "/location", icon: Map },
         { href: "/profile", icon: User },
-        { href: "/favorites", icon: Heart },
+        { href: "/donor", icon: Heart },
         { href: "/settings", icon: Settings },
     ];
 
@@ -39,6 +45,7 @@ export default function DashboardLayout({ userType = "customer" }) {
         { href: "/restaurant", icon: Building2 },
         { href: "/inventory", icon: ShoppingBag },
         { href: "/donations", icon: Gift },
+        { href: "/donor", icon: Heart },
         { href: "/settings", icon: Settings },
     ];
 
@@ -55,81 +62,74 @@ export default function DashboardLayout({ userType = "customer" }) {
                     "x-auth-token": token,
                 };
 
+                // Get user info
                 const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me`, { headers });
                 if (userResponse.data?.user) {
                     setCurrentUser(userResponse.data.user);
                 }
 
+                // Get pending requests
                 const pendingResponse = await axios.get(
                     `${API_BASE_URL}/api/swaps/pending`,
                     { headers }
                 );
                 
-                if (pendingResponse.data?.success) {
-                    setPendingRequests(pendingResponse.data.data || []);
-                }
+                const pendingReqs = pendingResponse.data?.success ? 
+                    (pendingResponse.data.data || []) : [];
+                    
+                setPendingRequests(pendingReqs);
 
-                const acceptedResponse = await axios.get(
-                    `${API_BASE_URL}/api/swaps/my-swaps?status=accepted`,
-                    { headers }
-                );
-                
-                if (acceptedResponse.data?.success) {
-                    setAcceptedSwaps(acceptedResponse.data.data.swaps || []);
-                }
-
+                // Get pending reviews - only count these for notifications
                 const completedResponse = await axios.get(
                     `${API_BASE_URL}/api/swaps/my-swaps?status=completed`,
                     { headers }
                 );
                 
-                let pendingReviewsCount = 0;
+                let pendingReviewItems = [];
                 
-                if (completedResponse.data?.success) {
+                if (completedResponse.data?.success && userResponse.data?.user) {
+                    const userId = userResponse.data.user._id;
                     const swaps = completedResponse.data.data.swaps || [];
                     
-                    pendingReviewsCount = swaps.filter(swap => {
-                        const isRequester = userResponse.data.user._id === swap.requester._id;
-                        const isProvider = userResponse.data.user._id === swap.provider._id;
-                        
-                        if (isRequester && !swap.providerRating) {
-                            return true;
+                    // Find swaps needing reviews
+                    pendingReviewItems = swaps.filter(swap => {
+                        if (userId === swap.requester?._id) {
+                            return !swap.providerRating || swap.providerRating === 0;
                         }
-                        
-                        if (isProvider && !swap.requesterRating) {
-                            return true;
+                        if (userId === swap.provider?._id) {
+                            return !swap.requesterRating || swap.requesterRating === 0;
                         }
-                        
                         return false;
-                    }).length;
+                    });
                 }
-
-                const pendingCount = pendingResponse.data?.data?.length || 0;
-                const acceptedCount = acceptedResponse.data?.data?.swaps?.length || 0;
-                setNotifications(pendingCount + acceptedCount + pendingReviewsCount);
                 
+                setPendingReviews(pendingReviewItems);
+
+                // Only count pending requests and pending reviews for notifications
+                // NOT accepted swaps (these should just be in their tab)
+                const totalNotifications = pendingReqs.length + pendingReviewItems.length;
+                
+                setNotifications(totalNotifications);
             } catch (error) {
                 console.error("Error fetching notification data:", error);
             }
         };
 
         fetchNotificationData();
-
         const intervalId = setInterval(fetchNotificationData, 30000);
-        
-        return () => {
-            clearInterval(intervalId);
-        };
+        return () => clearInterval(intervalId);
     }, []);
 
     const handleNotificationClick = () => {
-        if (pendingRequests.length > 0) {
-            navigate("/profile?tab=requests");
-        } else if (acceptedSwaps.length > 0) {
-            navigate("/profile?tab=accepted");
-        } else {
-            navigate("/profile?tab=pendingReviews");
-        }
+        // Always navigate to the profile page first
+        const targetTab = pendingRequests.length > 0 
+            ? "requests" 
+            : pendingReviews.length > 0 
+                ? "pendingReviews" 
+                : "transactions";
+        
+        // Force a hard navigation to ensure the URL changes are processed
+        window.location.href = `/profile?tab=${targetTab}`;
     };
 
     return (
