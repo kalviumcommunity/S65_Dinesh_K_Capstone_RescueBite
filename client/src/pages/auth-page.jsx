@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -16,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 const GOOGLE_AUTH_URL = `http://localhost:5000/auth/callback/google`;
 
@@ -89,30 +87,120 @@ export default function AuthForms() {
         setError("");
 
         try {
-            const response = await axios.post(`${API_BASE_URL}/login`, {
+            // First login attempt
+            const loginResponse = await axios.post(`${API_BASE_URL}/api/auth/login`, {
                 email,
                 password
             });
 
-            const { token, user } = response.data;
-            localStorage.setItem("token", token);
-            localStorage.setItem("user", JSON.stringify(user));
-            
-            // Set default auth header for future requests
-            axios.defaults.headers.common["x-auth-token"] = token;
+            // Store token
+            localStorage.setItem("token", loginResponse.data.token);
+            axios.defaults.headers.common["x-auth-token"] = loginResponse.data.token;
 
-            alert("Welcome back!");
-            
-            if (user.role === "Individual") {
-                navigate("/customer");
-            } else {
-                navigate("/restaurant");
+            // Since the role is missing in the login response, make a second API call
+            // to get the user's complete profile data
+            try {
+                const userProfileResponse = await axios.get(`${API_BASE_URL}/api/auth/me`, {
+                    headers: {
+                        "x-auth-token": loginResponse.data.token
+                    }
+                });
+                
+                // Get the complete user data with all fields
+                const fullUserData = userProfileResponse.data.user || userProfileResponse.data.data;
+                
+                if (fullUserData) {
+                    // Store user ID
+                    localStorage.setItem("userId", fullUserData._id || fullUserData.id);
+                    
+                    // Check for organization-specific indicators in the full profile
+                    if (fullUserData.role === "Individual") {
+                        localStorage.setItem("userRole", "Individual");
+                        // Force navigation with window.location instead of navigate()
+                        window.location.href = "/customer";
+                        return;
+                    } 
+                    else if (fullUserData.role === "Organization") {
+                        localStorage.setItem("userRole", "Organization");
+                        window.location.href = "/restaurant";
+                        return;
+                    }
+                    else if (fullUserData.accountType === "organization") {
+                        localStorage.setItem("userRole", "Organization");
+                        navigate("/restaurant");
+                        return;
+                    }
+                    else if (fullUserData.accountType === "individual") {
+                        localStorage.setItem("userRole", "Individual");
+                        navigate("/customer");
+                        return;
+                    }
+             
+                    else if (fullUserData.businessName || fullUserData.businessType) {
+                    
+                        localStorage.setItem("userRole", "Organization");
+                        navigate("/restaurant");
+                        return;
+                    }
+                    else {
+               
+                        const email = fullUserData.email.toLowerCase();
+                        if (email.includes("vereo") || 
+                            email.includes("org") || 
+                            email.includes("business") || 
+                            email.includes("company")) {
+                          
+                            localStorage.setItem("userRole", "Organization");
+                            navigate("/restaurant");
+                            return;
+                        }
+                        
+                   
+                        console.log("No organization indicators found, defaulting to individual");
+                        localStorage.setItem("userRole", "Individual");
+                        navigate("/customer");
+                    }
+                } else {
+                 
+                    routeUserBasedOnLoginData(loginResponse.data.user);
+                }
+            } catch (profileError) {
+               
+                routeUserBasedOnLoginData(loginResponse.data.user);
             }
+            
         } catch (error) {
+            console.error("Login error:", error);
             const message = error.response?.data?.message || "Login failed. Please check your credentials.";
             setError(message);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+  
+    const routeUserBasedOnLoginData = (user) => {
+        if (!user) {
+            console.error("No user data available for routing");
+            navigate("/customer"); 
+            return;
+        }
+        
+        console.log("Fallback routing based on login data");
+        
+       
+        const email = user.email.toLowerCase();
+        if (email.includes("vereo") || 
+            email.includes("org") || 
+            email.includes("business") || 
+            email.includes("company")) {
+           
+            localStorage.setItem("userRole", "Organization");
+            navigate("/restaurant");
+        } else {
+            console.log("No organization indicators found, defaulting to individual");
+            localStorage.setItem("userRole", "Individual");
+            navigate("/customer");
         }
     };
 
@@ -122,27 +210,44 @@ export default function AuthForms() {
         setError("");
 
         try {
+ 
+            const userRole = userType === "owner" ? "Organization" : "Individual";
+            
             const userData = {
-                firstName,
-                lastName,
                 email,
                 password,
+                firstName,
+                lastName,
                 phone,
                 bio,
-                address,
-                role: userType === "owner" ? "Organization" : "Individual"
+     
+                role: userRole,
+                accountType: userType === "owner" ? "organization" : "individual", 
+                location: {
+                    address: address,
+                    type: "Point",
+                    coordinates: [0, 0]
+                }
             };
 
-            const response = await axios.post(`${API_BASE_URL}/register`, userData);
-            const { token, user } = response.data;
+            if (userType === "owner") {
+                userData.businessName = `${firstName} ${lastName}'s Business`;
+                userData.businessType = "restaurant";
+                userData.businessAddress = address;
+            }
 
-            localStorage.setItem("token", token);
-            localStorage.setItem("user", JSON.stringify(user));
-            
-            // Set default auth header for future requests
-            axios.defaults.headers.common["x-auth-token"] = token;
+            const response = await axios.post(`${API_BASE_URL}/api/auth/register`, userData);
 
-            if (user.role === "Individual") {
+            localStorage.setItem("token", response.data.token);
+            localStorage.setItem("userRole", userRole);
+            axios.defaults.headers.common["x-auth-token"] = response.data.token;
+
+          
+            console.log("Signup successful, user data:", response.data.user);
+            console.log("Assigned role:", userRole);
+
+           
+            if (userRole === "Individual") {
                 navigate("/customer");
             } else {
                 navigate("/restaurant");
@@ -399,3 +504,4 @@ export default function AuthForms() {
         </div>
     );
 }
+
