@@ -1,11 +1,11 @@
 const cron = require('node-cron');
 const FoodItem = require('./models/food-model');
 
-// Initialize cron tasks
+
 const initCronTasks = () => {
   console.log('Initializing scheduled tasks...');
 
-  // Check for expired food items every minute
+ 
   cron.schedule('* * * * *', async () => {
     try {
       const now = new Date();
