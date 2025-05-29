@@ -5,7 +5,7 @@ const UserSchema = new mongoose.Schema(
   {
     accountType: {
       type: String,
-      enum: ["individual", "organization"],
+      enum: ["individual"],
       required: true,
     },
     email: {
@@ -27,24 +27,6 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: function () {
         return this.accountType === "individual"
-      },
-    },
-    businessName: {
-      type: String,
-      required: function () {
-        return this.accountType === "organization"
-      },
-    },
-    businessType: {
-      type: String,
-      required: function () {
-        return this.accountType === "organization"
-      },
-    },
-    businessAddress: {
-      type: String,
-      required: function () {
-        return this.accountType === "organization"
       },
     },
     profileImage: {
@@ -146,10 +128,8 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Create index for geospatial queries
 UserSchema.index({ location: "2dsphere" })
 
-// Hash password before saving
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next()
 
@@ -162,12 +142,10 @@ UserSchema.pre("save", async function (next) {
   }
 })
 
-// Method to compare passwords
 UserSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password)
 }
 
-// Virtual for full name
 UserSchema.virtual("fullName").get(function () {
   if (this.accountType === "individual") {
     return `${this.firstName} ${this.lastName}`
@@ -175,11 +153,9 @@ UserSchema.virtual("fullName").get(function () {
   return this.businessName
 })
 
-// Calculate average rating
 UserSchema.methods.calculateRating = function () {
   if (this.ratingCount === 0) return 0
   return this.rating / this.ratingCount
 }
 
 module.exports = mongoose.model("User", UserSchema)
-

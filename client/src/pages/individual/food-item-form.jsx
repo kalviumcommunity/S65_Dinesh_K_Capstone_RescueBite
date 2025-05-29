@@ -199,7 +199,6 @@ export default function FoodItemForm() {
     e.preventDefault()
 
     const files = Array.from(e.target.files)
-    console.log("Selected files:", files);
 
     // Limit to 5 images
     if (imageFiles.length + files.length > 5) {
@@ -263,7 +262,6 @@ export default function FoodItemForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
 
     if (!validateForm()) return;
 
@@ -275,16 +273,12 @@ export default function FoodItemForm() {
       let cloudinaryImages = [];
       
       if (imageFiles && imageFiles.length > 0) {
-        console.log("Uploading images to Cloudinary. Files:", imageFiles.map(f => f.name));
-        
         const imagesFormData = new FormData();
         imageFiles.forEach(file => {
-          console.log("Appending file:", file.name, file.type, file.size);
           imagesFormData.append("images", file);
         });
         
         try {
-          // Set longer timeout for uploads
           const uploadResponse = await axios.post(
             `${API_BASE_URL}/api/food-items/upload`, 
             imagesFormData,
@@ -299,12 +293,10 @@ export default function FoodItemForm() {
           
           if (uploadResponse.data.success) {
             cloudinaryImages = uploadResponse.data.data || [];
-            console.log("Images uploaded successfully:", cloudinaryImages);
           } else {
             throw new Error(uploadResponse.data.message || "Failed to upload images");
           }
         } catch (uploadError) {
-          console.error("Error uploading images:", uploadError);
           const errorMsg = uploadError.response?.data?.message || 
                           uploadError.message || 
                           "Server error";
@@ -392,9 +384,8 @@ export default function FoodItemForm() {
       }
 
       if (result.data.success) {
-        // Redirect to appropriate dashboard with fallback
-        const accountType = user?.accountType || "individual";
-        navigate(accountType === "organization" ? "/inventory" : "/customer");
+        // Redirect to customer dashboard
+        navigate("/customer");
       } else {
         throw new Error(result.data.message || "Failed to save food item");
       }

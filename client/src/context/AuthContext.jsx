@@ -10,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Set auth token
   const setAuthToken = (token) => {
     if (token) {
       axios.defaults.headers.common["x-auth-token"] = token
@@ -21,7 +20,6 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Load user
   const loadUser = async () => {
     if (token) {
       setAuthToken(token)
@@ -41,7 +39,6 @@ export const AuthProvider = ({ children }) => {
     setLoading(false)
   }
 
-  // Register user
   const register = async (formData) => {
     try {
       const res = await axios.post("/api/auth/register", formData)
@@ -55,7 +52,6 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Login user
   const login = async (email, password) => {
     try {
       const res = await axios.post("/api/auth/login", { email, password })
@@ -71,16 +67,13 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Logout user
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
     setIsAuthenticated(false)
-    // Add redirect
-    window.location.href = '/auth'
+    window.location.href = '/auth/login'
   }
 
-  // Update user profile
   const updateProfile = async (profileData) => {
     try {
       const res = await axios.put("/api/users/profile", profileData)
@@ -92,7 +85,6 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  // Clear errors
   const clearError = () => {
     setError(null)
   }
@@ -122,4 +114,3 @@ export const AuthProvider = ({ children }) => {
 }
 
 export const useAuth = () => useContext(AuthContext)
-

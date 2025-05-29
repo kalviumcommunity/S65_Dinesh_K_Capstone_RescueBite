@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 
 const auth = (req, res, next) => {
     try {
-        // Get token from header
         const token = req.header('x-auth-token');
         if (!token) {
             return res.status(401).json({
@@ -11,10 +10,8 @@ const auth = (req, res, next) => {
             });
         }
 
-        // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // Add user data to request
         req.user = decoded;
         next();
     } catch (error) {

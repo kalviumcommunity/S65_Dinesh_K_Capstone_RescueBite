@@ -8,7 +8,6 @@ const validateRegistration = (req, res, next) => {
     });
   }
   
-  // Email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({
@@ -17,7 +16,6 @@ const validateRegistration = (req, res, next) => {
     });
   }
   
-  // Password validation (minimum 6 characters)
   if (password.length < 6) {
     return res.status(400).json({
       success: false,
@@ -44,4 +42,4 @@ const validateLogin = (req, res, next) => {
 module.exports = {
   validateRegistration,
   validateLogin
-}; 
+};

@@ -14,18 +14,15 @@ export const FoodProvider = ({ children }) => {
     total: 0,
   })
 
-  // Get all food items
   const getFoodItems = async (params = {}) => {
     setLoading(true)
 
     try {
       const queryParams = new URLSearchParams()
 
-      // Add pagination
       queryParams.append("page", params.page || 1)
       queryParams.append("limit", params.limit || 10)
 
-      // Add filters
       if (params.category) queryParams.append("category", params.category)
       if (params.dietary) queryParams.append("dietary", params.dietary)
       if (params.isFree) queryParams.append("isFree", params.isFree)
@@ -54,7 +51,6 @@ export const FoodProvider = ({ children }) => {
     }
   }
 
-  // Get a single food item
   const getFoodItem = async (id) => {
     setLoading(true)
 
@@ -70,7 +66,6 @@ export const FoodProvider = ({ children }) => {
     }
   }
 
-  // Create a new food item
   const createFoodItem = async (foodItemData) => {
     setLoading(true)
 
@@ -85,7 +80,6 @@ export const FoodProvider = ({ children }) => {
     }
   }
 
-  // Update a food item
   const updateFoodItem = async (id, foodItemData) => {
     setLoading(true)
 
@@ -100,7 +94,6 @@ export const FoodProvider = ({ children }) => {
     }
   }
 
-  // Delete a food item
   const deleteFoodItem = async (id) => {
     setLoading(true)
 
@@ -115,18 +108,15 @@ export const FoodProvider = ({ children }) => {
     }
   }
 
-  // Get food items by user
   const getUserFoodItems = async (userId, params = {}) => {
     setLoading(true)
 
     try {
       const queryParams = new URLSearchParams()
 
-      // Add pagination
       queryParams.append("page", params.page || 1)
       queryParams.append("limit", params.limit || 10)
 
-      // Add status filter
       if (params.status) queryParams.append("status", params.status)
 
       const res = await axios.get(`/api/food-items/user/${userId}?${queryParams.toString()}`)
@@ -147,7 +137,6 @@ export const FoodProvider = ({ children }) => {
     }
   }
 
-  // Clear errors
   const clearError = () => {
     setError(null)
   }
@@ -175,4 +164,3 @@ export const FoodProvider = ({ children }) => {
 }
 
 export const useFood = () => useContext(FoodContext)
-

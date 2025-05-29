@@ -8,17 +8,14 @@ import {
     User,
     LogOut,
     Bell,
-    ShoppingBag,
     Settings,
-    Building2,
-    Gift,
     Heart,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-export default function DashboardLayout({ userType = "customer" }) {
+export default function DashboardLayout() {
     const location = useLocation();
     const navigate = useNavigate();
     const [notifications, setNotifications] = useState(0);
@@ -33,24 +30,13 @@ export default function DashboardLayout({ userType = "customer" }) {
     });
     const [pendingReviews, setPendingReviews] = useState([]);
 
-    const customerNavItems = [
+    const navItems = [
         { href: "/customer", icon: Home },
         { href: "/location", icon: Map },
         { href: "/profile", icon: User },
         { href: "/donor", icon: Heart },
         { href: "/settings", icon: Settings },
     ];
-
-    const restaurantNavItems = [
-        { href: "/restaurant", icon: Building2 },
-        { href: "/inventory", icon: ShoppingBag },
-        { href: "/donations", icon: Gift },
-        { href: "/donor", icon: Heart },
-        { href: "/settings", icon: Settings },
-    ];
-
-    const navItems =
-        userType === "customer" ? customerNavItems : restaurantNavItems;
 
     useEffect(() => {
         const fetchNotificationData = async () => {
@@ -62,13 +48,11 @@ export default function DashboardLayout({ userType = "customer" }) {
                     "x-auth-token": token,
                 };
 
-                // Get user info
                 const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me`, { headers });
                 if (userResponse.data?.user) {
                     setCurrentUser(userResponse.data.user);
                 }
 
-                // Get pending requests
                 const pendingResponse = await axios.get(
                     `${API_BASE_URL}/api/swaps/pending`,
                     { headers }
@@ -79,7 +63,6 @@ export default function DashboardLayout({ userType = "customer" }) {
                     
                 setPendingRequests(pendingReqs);
 
-                // Get pending reviews - only count these for notifications
                 const completedResponse = await axios.get(
                     `${API_BASE_URL}/api/swaps/my-swaps?status=completed`,
                     { headers }
@@ -91,13 +74,16 @@ export default function DashboardLayout({ userType = "customer" }) {
                     const userId = userResponse.data.user._id;
                     const swaps = completedResponse.data.data.swaps || [];
                     
-                    // Find swaps needing reviews
                     pendingReviewItems = swaps.filter(swap => {
                         if (userId === swap.requester?._id) {
                             return !swap.providerRating || swap.providerRating === 0;
                         }
-                        if (userId === swap.provider?._id) {
-                            return !swap.requesterRating || swap.requesterRating === 0;
+                        if (
+                            userId === swap.provider?._id &&
+                            (!swap.requesterRating || swap.requesterRating === 0) &&
+                            swap.isSwap && swap.offeredItem
+                        ) {
+                            return true;
                         }
                         return false;
                     });
@@ -105,8 +91,6 @@ export default function DashboardLayout({ userType = "customer" }) {
                 
                 setPendingReviews(pendingReviewItems);
 
-                // Only count pending requests and pending reviews for notifications
-                // NOT accepted swaps (these should just be in their tab)
                 const totalNotifications = pendingReqs.length + pendingReviewItems.length;
                 
                 setNotifications(totalNotifications);
@@ -121,58 +105,28 @@ export default function DashboardLayout({ userType = "customer" }) {
     }, []);
 
     const handleNotificationClick = () => {
-        // Always navigate to the profile page first
         const targetTab = pendingRequests.length > 0 
             ? "requests" 
             : pendingReviews.length > 0 
                 ? "pendingReviews" 
                 : "transactions";
         
-        // Force a hard navigation to ensure the URL changes are processed
         window.location.href = `/profile?tab=${targetTab}`;
     };
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            {/* Static Sidebar - Fixed position */}
             <div className="fixed top-0 left-0 h-full w-16 bg-white border-r border-gray-200 flex flex-col z-10">
-                {/* Sidebar Header */}
                 <div className="border-b border-gray-200 p-4 py-[18px] flex items-center justify-center">
-                    <Link to="/">
-                        <svg
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-6 w-6"
-                        >
-                            <path
-                                d="M12 2L2 7L12 12L22 7L12 2Z"
-                                stroke="#000000"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                            <path
-                                d="M2 17L12 22L22 17"
-                                stroke="#000000"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                            <path
-                                d="M2 12L12 17L22 12"
-                                stroke="#000000"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
+                    <Link to="/" className="group">
+                        <img
+                            src="/vite.svg"
+                            alt="RescueBite Home"
+                            className="h-6 w-6 transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
+                        />
                     </Link>
                 </div>
 
-                {/* Navigation Items */}
                 <div className="flex-1 py-6 overflow-y-auto">
                     <ul className="space-y-1 px-2">
                         {navItems.map((item) => (
@@ -192,7 +146,6 @@ export default function DashboardLayout({ userType = "customer" }) {
                     </ul>
                 </div>
 
-                {/* Sidebar Footer */}
                 <div className="border-t border-gray-200 py-10 flex items-center justify-center">
                     <Link
                         to="/auth/login"
@@ -203,7 +156,6 @@ export default function DashboardLayout({ userType = "customer" }) {
                 </div>
             </div>
 
-            {/* Main Content Area - Add left padding to account for fixed sidebar */}
             <div className="flex-1 flex flex-col ml-16">
                 <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
                     <div className="flex items-center justify-end px-4 py-3">

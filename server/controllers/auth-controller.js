@@ -72,7 +72,7 @@ const login = async (req, res) => {
    
     const payload = {
       id: user._id,
-      accountType: user.accountType || 'individual' // Ensure account type is included
+      accountType: user.accountType || 'individual' 
     };
     
    
@@ -82,8 +82,6 @@ const login = async (req, res) => {
       { expiresIn: '7d' },
       (err, token) => {
         if (err) throw err;
-        
-        console.log("Generated token with account type:", payload.accountType);
         
         res.json({
           success: true,
@@ -98,7 +96,6 @@ const login = async (req, res) => {
       }
     );
   } catch (error) {
-    console.error('Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',

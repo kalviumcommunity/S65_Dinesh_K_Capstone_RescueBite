@@ -2,7 +2,6 @@ const FoodItem = require("../models/food-model");
 const User = require("../models/user-model");
 const { cloudinary, handleFoodItemUpload, isCloudinaryConfigured } = require("../database/cloudinary");
 
-// Get all food items with filtering and pagination
 const getAllFoodItems = async (req, res) => {
   try {
     const {
@@ -13,20 +12,15 @@ const getAllFoodItems = async (req, res) => {
       isFree,
       lat,
       lng,
-      distance = 10, // in kilometers
+      distance = 10,
       search,
       sortBy = "createdAt",
       sortOrder = "desc",
       includeExpired = false,
     } = req.query;
 
-    console.log("Fetching food items, includeExpired:", includeExpired);
-    
-    // IMPORTANT: Always update expired items before returning results
     const now = new Date();
-    console.log("Current time:", now.toISOString());
-    
-    // Bulk update any items that have expired
+
     const updateResult = await FoodItem.updateMany(
       { 
         expiresAt: { $lt: now },
@@ -37,26 +31,19 @@ const getAllFoodItems = async (req, res) => {
       }
     );
     
-    console.log(`Updated ${updateResult.modifiedCount} expired food items`);
-
-    // Build query
-    // We're being explicit about the conditions to ensure we don't miss anything
     const query = { 
       status: includeExpired === 'true' ? { $in: ["available", "expired"] } : "available",
       isAvailable: includeExpired === 'true' ? { $in: [true, false] } : true
     };
     
-    // Additional time check for extra certainty
     if (includeExpired !== 'true') {
       query.expiresAt = { $gt: now };
     }
 
-    // Add category filter
     if (category) {
       query.category = category;
     }
 
-    // Add dietary filters
     if (dietary) {
       const dietaryOptions = dietary.split(",");
       dietaryOptions.forEach((option) => {
@@ -64,17 +51,14 @@ const getAllFoodItems = async (req, res) => {
       });
     }
 
-    // Add price filter
     if (isFree === "true") {
       query.isFree = true;
     }
 
-    // Add search filter
     if (search) {
       query.$or = [{ title: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }];
     }
 
-    // Add location filter
     if (lat && lng) {
       query.location = {
         $near: {
@@ -82,28 +66,22 @@ const getAllFoodItems = async (req, res) => {
             type: "Point",
             coordinates: [Number.parseFloat(lng), Number.parseFloat(lat)],
           },
-          $maxDistance: Number.parseInt(distance) * 1000, // convert to meters
+          $maxDistance: Number.parseInt(distance) * 1000,
         },
       };
     }
 
-    // Build sort
     const sort = {};
     sort[sortBy] = sortOrder === "asc" ? 1 : -1;
 
-    // Execute query with pagination
     const foodItems = await FoodItem.find(query)
       .populate("owner", "firstName lastName businessName profileImage rating ratingCount accountType")
       .sort(sort)
       .limit(Number.parseInt(limit))
       .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
-    // Get total count
     const total = await FoodItem.countDocuments(query);
 
-    // Add extra logging
-    console.log(`Found ${foodItems.length} food items matching the criteria`);
-    
     res.status(200).json({
       success: true,
       data: {
@@ -111,7 +89,7 @@ const getAllFoodItems = async (req, res) => {
         totalPages: Math.ceil(total / Number.parseInt(limit)),
         currentPage: Number.parseInt(page),
         total,
-        timestamp: now.toISOString(), // Add timestamp to response for debugging
+        timestamp: now.toISOString(),
       },
     });
   } catch (error) {
@@ -123,7 +101,6 @@ const getAllFoodItems = async (req, res) => {
   }
 };
 
-// Get a single food item
 const getSingleFoodItem = async (req, res) => {
   try {
     const foodItem = await FoodItem.findById(req.params.id).populate(
@@ -151,10 +128,8 @@ const getSingleFoodItem = async (req, res) => {
   }
 };
 
-// Upload images to Cloudinary
 const uploadFoodImages = async (req, res) => {
   try {
-    // Verify Cloudinary is configured
     if (!isCloudinaryConfigured()) {
       return res.status(500).json({
         success: false,
@@ -162,7 +137,6 @@ const uploadFoodImages = async (req, res) => {
       });
     }
     
-    // Handle the upload
     await handleFoodItemUpload(req, res);
     
     if (!req.files || req.files.length === 0) {
@@ -172,16 +146,10 @@ const uploadFoodImages = async (req, res) => {
       });
     }
 
-    // Log the files for debugging
-    console.log("Files received:", req.files.length);
-    
-    // Process Cloudinary response to include both URL and public ID
     const uploadedImages = req.files.map((file) => ({
       url: file.path,
       publicId: file.filename || file.public_id
     }));
-
-    console.log("Uploaded Images:", uploadedImages);
 
     res.status(200).json({
       success: true,
@@ -189,7 +157,6 @@ const uploadFoodImages = async (req, res) => {
       data: uploadedImages,
     });
   } catch (error) {
-    console.error("Error uploading images:", error);
     res.status(500).json({
       success: false,
       message: "Error uploading images: " + error.message,
@@ -198,7 +165,6 @@ const uploadFoodImages = async (req, res) => {
   }
 };
 
-// Get Cloudinary status
 const getCloudinaryStatus = async (req, res) => {
   try {
     const status = {
@@ -222,11 +188,8 @@ const getCloudinaryStatus = async (req, res) => {
   }
 };
 
-// Create a new food item
 const createFoodItem = async (req, res) => {
   try {
-    console.log("Creating food item with data:", JSON.stringify(req.body, null, 2));
-    
     const {
       title,
       description,
@@ -243,7 +206,6 @@ const createFoodItem = async (req, res) => {
       isPickupOnly,
     } = req.body;
 
-    // Validate required fields
     if (!title || !description) {
       return res.status(400).json({
         success: false,
@@ -251,7 +213,6 @@ const createFoodItem = async (req, res) => {
       });
     }
 
-    // Handle dietary preferences with defaults
     const dietaryPrefs = {
       vegetarian: false,
       vegan: false,
@@ -261,7 +222,6 @@ const createFoodItem = async (req, res) => {
       ...dietary
     };
 
-    // Process location data
     const locationObj = {
       type: "Point",
       coordinates: [0, 0],
@@ -277,44 +237,33 @@ const createFoodItem = async (req, res) => {
       }
     }
 
-    // Format expiration date and ensure it's not in the past
     let expirationDate;
     try {
       expirationDate = new Date(expiresAt);
       if (isNaN(expirationDate.getTime()) || expirationDate <= new Date()) {
-        // If invalid or in the past, set to 24 hours from now
-        console.log("Adjusting invalid expiration date that was:", expiresAt);
         expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 1);
       }
     } catch (err) {
-      console.error("Date parsing error:", err);
       expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 1);
     }
 
-    // Process image data to match schema requirements
-    // Convert image objects to just URLs if needed
     const processedImages = [];
     if (images && Array.isArray(images)) {
       images.forEach(img => {
         if (typeof img === 'string') {
-          // If it's already a string URL, use it directly
           processedImages.push(img);
         } else if (img && img.url) {
-          // If it's an object with a URL property, use just the URL
           processedImages.push(img.url);
         }
       });
     }
 
-    console.log("Processed images for MongoDB:", processedImages);
-
-    // Create food item with safe defaults
     const foodItem = new FoodItem({
       title: title.trim(),
       description: description.trim(),
-      images: processedImages, // Now using the properly formatted images
+      images: processedImages,
       quantity: parseInt(quantity) || 1,
       quantityUnit: quantityUnit || "servings",
       category: category || "other",
@@ -329,11 +278,8 @@ const createFoodItem = async (req, res) => {
       status: "available"
     });
 
-    // Save the food item
     const savedItem = await foodItem.save();
-    console.log("Food item saved successfully:", savedItem._id);
     
-    // Update user's itemsShared count
     await User.findByIdAndUpdate(req.user.id, {
       $inc: { itemsShared: 1 },
     });
@@ -344,9 +290,6 @@ const createFoodItem = async (req, res) => {
       data: savedItem,
     });
   } catch (error) {
-    console.error("Error creating food item:", error);
-    
-    // Improved error handling
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -366,7 +309,6 @@ const createFoodItem = async (req, res) => {
   }
 };
 
-// Update a food item
 const updateFoodItem = async (req, res) => {
   try {
     const foodItem = await FoodItem.findById(req.params.id);
@@ -378,7 +320,6 @@ const updateFoodItem = async (req, res) => {
       });
     }
 
-    // Check if user is the owner
     if (foodItem.owner.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -572,7 +513,6 @@ const getFoodItemsByCurrentUser = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in getFoodItemsByCurrentUser:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',

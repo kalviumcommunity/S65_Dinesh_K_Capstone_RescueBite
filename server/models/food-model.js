@@ -98,28 +98,20 @@ const FoodItemSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Create index for geospatial queries
 FoodItemSchema.index({ location: "2dsphere" })
 
-// Create index for expiration date to easily find expired items
 FoodItemSchema.index({ expiresAt: 1 })
 
-// Virtual for time remaining until expiration
 FoodItemSchema.virtual("timeRemaining").get(function () {
   const now = new Date()
   const diff = this.expiresAt - now
-
-  // Return in milliseconds
   return diff > 0 ? diff : 0
 })
 
-// Virtual for discount percentage
 FoodItemSchema.virtual("discountPercentage").get(function () {
   if (!this.originalPrice || this.originalPrice <= 0 || this.isFree) return 100
-
   const discount = ((this.originalPrice - this.price) / this.originalPrice) * 100
   return Math.round(discount)
 })
 
 module.exports = mongoose.model("FoodItem", FoodItemSchema)
-

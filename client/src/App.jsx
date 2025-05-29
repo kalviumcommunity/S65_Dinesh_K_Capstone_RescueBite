@@ -7,13 +7,10 @@ import LandingPage from "./pages/landing-page"
 import AuthPage from "./pages/auth-page"
 import DashboardLayout from "./components/dashboard-layout"
 import IndividualDashboard from "./pages/individual/individual-dashboard"
-import OrganizationDashboard from "./pages/organization/organization-dashboard"
 import LocationPage from "./pages/individual/location-page"
 import ProfilePage from "./pages/individual/profile-page"
 import SecretDonorPage from "./pages/secret-donor-page"
 import FoodItemForm from "./pages/individual/food-item-form"
-import InventoryPage from "./pages/organization/inventory-page"
-import DonationsPage from "./pages/secret-donor-page"
 import Settings from './pages/Settings'
 
 function App() {
@@ -46,20 +43,6 @@ function App() {
               </Route>
 
               {/* Restaurant routes with dashboard layout */}
-              <Route
-                path="/"
-                element={
-                  <PrivateRoute>
-                    <DashboardLayout userType="restaurant" />
-                  </PrivateRoute>
-                }
-              >
-                <Route path="/restaurant" element={<OrganizationDashboard />} />
-                <Route path="/inventory" element={<InventoryPage />} />
-                <Route path="/donations" element={<DonationsPage />} />
-              </Route>
-
-              {/* Shared routes with dashboard layout */}
               <Route
                 path="/"
                 element={
