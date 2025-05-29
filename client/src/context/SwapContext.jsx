@@ -14,18 +14,15 @@ export const SwapProvider = ({ children }) => {
     total: 0,
   })
 
-  // Get all swaps for current user
   const getMySwaps = async (params = {}) => {
     setLoading(true)
 
     try {
       const queryParams = new URLSearchParams()
 
-      // Add pagination
       queryParams.append("page", params.page || 1)
       queryParams.append("limit", params.limit || 10)
 
-      // Add filters
       if (params.status) queryParams.append("status", params.status)
       if (params.role) queryParams.append("role", params.role)
 
@@ -47,7 +44,6 @@ export const SwapProvider = ({ children }) => {
     }
   }
 
-  // Get a single swap
   const getSwap = async (id) => {
     setLoading(true)
 
@@ -63,7 +59,6 @@ export const SwapProvider = ({ children }) => {
     }
   }
 
-  // Create a new swap request
   const createSwap = async (swapData) => {
     setLoading(true)
 
@@ -78,7 +73,6 @@ export const SwapProvider = ({ children }) => {
     }
   }
 
-  // Update swap status
   const updateSwapStatus = async (id, status) => {
     setLoading(true)
 
@@ -93,7 +87,6 @@ export const SwapProvider = ({ children }) => {
     }
   }
 
-  // Add rating and review to a swap
   const addReview = async (id, reviewData) => {
     setLoading(true)
 
@@ -108,7 +101,6 @@ export const SwapProvider = ({ children }) => {
     }
   }
 
-  // Clear errors
   const clearError = () => {
     setError(null)
   }
@@ -135,4 +127,3 @@ export const SwapProvider = ({ children }) => {
 }
 
 export const useSwap = () => useContext(SwapContext)
-

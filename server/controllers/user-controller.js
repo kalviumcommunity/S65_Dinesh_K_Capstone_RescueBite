@@ -3,7 +3,6 @@ const FoodItem = require("../models/food-model");
 const Swap = require("../models/swap-model");
 const { upload, isCloudinaryConfigured } = require("../database/cloudinary");
 
-// Get user profile
 const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
@@ -15,7 +14,6 @@ const getUserProfile = async (req, res) => {
       });
     }
 
-    // Get user stats
     const foodItemsCount = await FoodItem.countDocuments({ owner: req.params.id });
     const activeListingsCount = await FoodItem.countDocuments({
       owner: req.params.id,
@@ -23,7 +21,6 @@ const getUserProfile = async (req, res) => {
       status: "available",
     });
 
-    // Calculate average rating
     const avgRating = user.ratingCount > 0 ? (user.rating / user.ratingCount).toFixed(1) : 0;
 
     res.status(200).json({
@@ -44,15 +41,12 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-// Update user profile
 const updateUserProfile = async (req, res) => {
   try {
     const { firstName, lastName, businessName, businessType, businessAddress, bio, location, phone, profileImage, currentPassword, newPassword } =
       req.body;
 
-    // If password update is requested
     if (currentPassword && newPassword) {
-      // Find user with password
       const user = await User.findById(req.user.id);
       if (!user) {
         return res.status(404).json({
@@ -61,7 +55,6 @@ const updateUserProfile = async (req, res) => {
         });
       }
 
-      // Verify current password
       const isMatch = await user.comparePassword(currentPassword);
       if (!isMatch) {
         return res.status(400).json({
@@ -70,9 +63,8 @@ const updateUserProfile = async (req, res) => {
         });
       }
 
-      // Update the password
       user.password = newPassword;
-      await user.save(); // This will trigger the pre-save hook to hash the password
+      await user.save();
 
       return res.status(200).json({
         success: true,
@@ -80,7 +72,6 @@ const updateUserProfile = async (req, res) => {
       });
     }
 
-    // Regular profile update (non-password fields)
     const updateFields = {};
     if (firstName !== undefined) updateFields.firstName = firstName;
     if (lastName !== undefined) updateFields.lastName = lastName;
@@ -91,9 +82,7 @@ const updateUserProfile = async (req, res) => {
     if (phone !== undefined) updateFields.phone = phone;
     if (profileImage !== undefined) updateFields.profileImage = profileImage;
 
-    // Handle location separately to ensure proper format
     if (location) {
-      // Ensure location has the correct format for MongoDB
       updateFields.location = {
         type: "Point",
         coordinates: Array.isArray(location.coordinates) 
@@ -103,7 +92,6 @@ const updateUserProfile = async (req, res) => {
       };
     }
 
-    // Update user
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { $set: updateFields },
@@ -123,7 +111,6 @@ const updateUserProfile = async (req, res) => {
       data: user,
     });
   } catch (error) {
-    // Handle validation errors specifically
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -143,12 +130,10 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
-// Get user reviews
 const getUserReviews = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
 
-    // Find swaps where user is provider or requester and has a review
     const swaps = await Swap.find({
       $or: [
         { provider: req.params.id, requesterReview: { $exists: true, $ne: "" } },
@@ -172,7 +157,6 @@ const getUserReviews = async (req, res) => {
       .limit(Number.parseInt(limit))
       .skip((Number.parseInt(page) - 1) * Number.parseInt(limit));
 
-    // Transform swaps to reviews
     const reviews = swaps.map((swap) => {
       if (swap.provider._id.toString() === req.params.id) {
         return {
@@ -197,7 +181,6 @@ const getUserReviews = async (req, res) => {
       }
     });
 
-    // Get total count
     const total = await Swap.countDocuments({
       $or: [
         { provider: req.params.id, requesterReview: { $exists: true, $ne: "" } },
@@ -224,10 +207,8 @@ const getUserReviews = async (req, res) => {
   }
 };
 
-// Upload profile image
 const uploadProfileImage = async (req, res) => {
   try {
-    // Check if Cloudinary is configured
     if (!isCloudinaryConfigured()) {
       return res.status(500).json({
         success: false,
@@ -235,10 +216,8 @@ const uploadProfileImage = async (req, res) => {
       });
     }
     
-    // Handle upload with multer middleware
     upload.single('profileImage')(req, res, async function(err) {
       if (err) {
-        // Handle multer errors
         return res.status(400).json({
           success: false,
           message: err.message || "Error uploading file",
@@ -253,12 +232,10 @@ const uploadProfileImage = async (req, res) => {
       }
       
       try {
-        // Update user's profile image with Cloudinary URL
         const user = await User.findByIdAndUpdate(
           req.user.id,
           { 
             profileImage: req.file.path,
-            // Store publicId for potential future image management
             profileImageId: req.file.filename || req.file.public_id 
           },
           { new: true }
@@ -293,7 +270,6 @@ const uploadProfileImage = async (req, res) => {
   }
 };
 
-// Check Cloudinary configuration
 const getCloudinaryStatus = async (req, res) => {
   try {
     const status = {
@@ -317,7 +293,6 @@ const getCloudinaryStatus = async (req, res) => {
   }
 };
 
-// Get current user profile
 const getCurrentUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -325,7 +300,6 @@ const getCurrentUserProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
     
-    // Initialize trust score if it doesn't exist
     if (user.trustScore === undefined) {
       user.trustScore = 0;
       await user.save();

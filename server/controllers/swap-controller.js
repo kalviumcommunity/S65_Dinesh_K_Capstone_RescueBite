@@ -2,7 +2,6 @@ const Swap = require("../models/swap-model");
 const FoodItem = require("../models/food-model");
 const User = require("../models/user-model");
 
-// Get all swaps for current user
 const getMySwaps = async (req, res) => {
   try {
     const {
@@ -14,7 +13,6 @@ const getMySwaps = async (req, res) => {
 
     const query = {};
 
-    // Add user role filter
     if (role === "requester") {
       query.requester = req.user.id;
     } else if (role === "provider") {
@@ -23,12 +21,10 @@ const getMySwaps = async (req, res) => {
       query.$or = [{ requester: req.user.id }, { provider: req.user.id }];
     }
 
-    // Add status filter if provided
     if (status) {
       query.status = status;
     }
 
-    // Execute query with full population
     const swaps = await Swap.find(query)
       .populate({
         path: "foodItem",
@@ -71,11 +67,10 @@ const getMySwaps = async (req, res) => {
   }
 };
 
-// Get pending swaps
 const getPendingSwaps = async (req, res) => {
   try {
     const swaps = await Swap.find({
-      provider: req.user.id, // Only requests where the logged-in user is the provider
+      provider: req.user.id,
       status: 'pending'
     })
     .populate({
@@ -105,7 +100,6 @@ const getPendingSwaps = async (req, res) => {
   }
 };
 
-// Get a single swap
 const getSingleSwap = async (req, res) => {
   try {
     const swap = await Swap.findById(req.params.id)
@@ -141,7 +135,6 @@ const getSingleSwap = async (req, res) => {
       });
     }
 
-    // Check if user is part of the swap
     if (swap.requester._id.toString() !== req.user.id && swap.provider._id.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -162,12 +155,10 @@ const getSingleSwap = async (req, res) => {
   }
 };
 
-// Create a new swap request
 const createSwap = async (req, res) => {
   try {
     const { foodItemId, message, offeredItemId, isSwap, isPurchase } = req.body;
 
-    // Validate request
     if (!foodItemId) {
       return res.status(400).json({
         success: false,
@@ -175,7 +166,6 @@ const createSwap = async (req, res) => {
       });
     }
 
-    // Get the food item and check availability
     const foodItem = await FoodItem.findById(foodItemId);
     if (!foodItem || !foodItem.isAvailable || foodItem.status !== 'available') {
       return res.status(400).json({
@@ -184,7 +174,6 @@ const createSwap = async (req, res) => {
       });
     }
 
-    // Check ownership
     if (foodItem.owner.toString() === req.user.id) {
       return res.status(400).json({
         success: false,
@@ -192,7 +181,6 @@ const createSwap = async (req, res) => {
       });
     }
 
-    // Initialize swap with default values
     const swapData = {
       requester: req.user.id,
       provider: foodItem.owner,
@@ -206,7 +194,6 @@ const createSwap = async (req, res) => {
       amount: isPurchase ? foodItem.price : 0
     };
 
-    // Handle swap-specific logic
     if (isSwap && offeredItemId) {
       const offeredItem = await FoodItem.findById(offeredItemId);
       if (!offeredItem || !offeredItem.isAvailable || offeredItem.status !== 'available') {
@@ -226,11 +213,9 @@ const createSwap = async (req, res) => {
       swapData.offeredItem = offeredItemId;
     }
 
-    // Create and save the swap
     const swap = new Swap(swapData);
     await swap.save();
 
-    // Update food item statuses
     await FoodItem.findByIdAndUpdate(foodItemId, {
       status: 'reserved',
       updatedAt: Date.now()
@@ -243,7 +228,6 @@ const createSwap = async (req, res) => {
       });
     }
 
-    // Return populated swap data
     const populatedSwap = await Swap.findById(swap._id)
       .populate('foodItem')
       .populate('offeredItem')
@@ -266,12 +250,10 @@ const createSwap = async (req, res) => {
   }
 };
 
-// Update swap status
 const updateSwapStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
-    // Get the swap
     const swap = await Swap.findById(req.params.id);
     if (!swap) {
       return res.status(404).json({
@@ -280,7 +262,6 @@ const updateSwapStatus = async (req, res) => {
       });
     }
 
-    // Check if user is the provider
     if (swap.provider.toString() !== req.user.id && swap.requester.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -288,7 +269,6 @@ const updateSwapStatus = async (req, res) => {
       });
     }
 
-    // Check if the status change is valid
     const validStatusChanges = {
       pending: ["accepted", "rejected", "cancelled"],
       accepted: ["completed", "cancelled"],
@@ -304,19 +284,14 @@ const updateSwapStatus = async (req, res) => {
       });
     }
 
-    // Additional validation for who can change to what status
     if (status === "accepted" || status === "rejected") {
-      // Only provider can accept or reject
       if (swap.provider.toString() !== req.user.id) {
         return res.status(403).json({
           success: false,
           message: "Only the provider can accept or reject a swap",
         });
       }
-    } else if (status === "cancelled") {
-      // Both can cancel
     } else if (status === "completed") {
-      // Only requester can mark as completed
       if (swap.requester.toString() !== req.user.id) {
         return res.status(403).json({
           success: false,
@@ -325,20 +300,16 @@ const updateSwapStatus = async (req, res) => {
       }
     }
 
-    // Update swap status
     swap.status = status;
     swap.updatedAt = Date.now();
     await swap.save();
 
-    // Update food item status based on swap status
     if (status === "rejected" || status === "cancelled") {
-      // Make food item available again
       await FoodItem.findByIdAndUpdate(swap.foodItem, {
         status: "available",
         updatedAt: Date.now(),
       });
 
-      // If it's a swap, make offered item available again
       if (swap.isSwap && swap.offeredItem) {
         await FoodItem.findByIdAndUpdate(swap.offeredItem, {
           status: "available",

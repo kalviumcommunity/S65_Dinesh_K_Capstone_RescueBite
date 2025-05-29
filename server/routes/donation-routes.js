@@ -3,7 +3,6 @@ const donationController = require("../controllers/donation-controller");
 const auth = require("../middlewares/auth");
 const router = express.Router();
 
-// Donation routes
 router.post("/", donationController.createDonation);
 router.post("/razorpay", donationController.createRazorpayDonation);
 router.get("/", auth, donationController.getAllDonations);

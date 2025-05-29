@@ -129,9 +129,9 @@ export default function LocationPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
-      <div className="pl-200 border-b bg-white">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 p-4">
-          <div className="relative flex-1">
+      <div className="border-b bg-white">
+        <div className="flex items-center gap-4 p-4 w-full">
+          <div className="relative flex-grow" style={{ maxWidth: "67rem" }}>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
@@ -141,8 +141,7 @@ export default function LocationPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-shrink-0">
             <div className="relative">
               <button
                 className="flex items-center justify-between w-40 px-3 py-2 border border-gray-300 rounded-md bg-white"
