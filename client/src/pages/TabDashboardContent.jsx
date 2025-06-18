@@ -79,7 +79,7 @@ export default function TabDashboardContent() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-base font-bold">93%</div>
+                    <div className="text-base font-bold">90%</div>
                     <div className="text-[8px] text-gray-500">Trust Score</div>
                   </div>
                 </div>
@@ -266,7 +266,7 @@ export default function TabDashboardContent() {
                   className="h-10 w-10 rounded-full object-cover"
                 />
                 <div>
-                  <div className="text-sm font-medium">vereo man</div>
+                  <div className="text-sm font-medium">gourish</div>
                   <div className="text-xs text-gray-500">Local user</div>
                 </div>
                 <div className="ml-auto text-lg font-bold">7</div>
