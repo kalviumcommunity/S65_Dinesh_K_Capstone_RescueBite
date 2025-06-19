@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+// Fix the API base URL - use your actual backend URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-const GOOGLE_AUTH_URL = `http://localhost:5000/auth/callback/google`;
+const GOOGLE_AUTH_URL = `${API_BASE_URL}/auth/callback/google`;
 
 const GoogleLogo = () => (
   <svg
@@ -80,51 +80,66 @@ export default function AuthForms() {
     window.location.href = authUrl;
   };
 
+  // Helper function to route user based on login data
+  const routeUserBasedOnLoginData = (userData) => {
+    if (userData) {
+      localStorage.setItem("userId", userData.id);
+      localStorage.setItem("userRole", userData.role || "Individual");
+      
+      console.log("Routing user based on login data:", userData);
+      
+      // Route based on role
+      if (userData.role === "Individual" || userData.accountType === "individual") {
+        navigate("/customer");
+      } else {
+        navigate("/customer"); // Default route
+      }
+    } else {
+      console.error("No user data available for routing");
+      navigate("/customer"); // Default fallback
+    }
+  };
+
   const onLoginSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
     try {
+      console.log("Attempting login with:", { email, password: "***" });
+      
       const loginResponse = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         email,
         password,
       });
 
-      localStorage.setItem("token", loginResponse.data.token);
-      axios.defaults.headers.common["x-auth-token"] = loginResponse.data.token;
+      console.log("Login response:", loginResponse.data);
 
-      try {
-        const userProfileResponse = await axios.get(
-          `${API_BASE_URL}/api/auth/me`,
-          {
-            headers: {
-              "x-auth-token": loginResponse.data.token,
-            },
-          }
-        );
+      if (loginResponse.data.success && loginResponse.data.token) {
+        // Store token and user data
+        localStorage.setItem("token", loginResponse.data.token);
+        localStorage.setItem("userId", loginResponse.data.user.id);
+        localStorage.setItem("userRole", loginResponse.data.user.role || "Individual");
+        
+        // Set axios default header for future requests
+        axios.defaults.headers.common["x-auth-token"] = loginResponse.data.token;
 
-        const fullUserData =
-          userProfileResponse.data.user || userProfileResponse.data.data;
+        console.log("Login successful, user data:", loginResponse.data.user);
+        console.log("Stored token:", loginResponse.data.token);
 
-        if (fullUserData) {
-          localStorage.setItem("userId", fullUserData._id || fullUserData.id);
-
-          if (fullUserData.role === "Individual") {
-            localStorage.setItem("userRole", "Individual");
-            window.location.href = "/customer";
-            return;
-          }
-          navigate("/customer");
-          return;
-        }
-      } catch (profileError) {
+        // Route user based on their role
         routeUserBasedOnLoginData(loginResponse.data.user);
+        
+      } else {
+        throw new Error("Invalid response from server");
       }
     } catch (error) {
       console.error("Login error:", error);
+      console.error("Error response:", error.response?.data);
+      
       const message =
         error.response?.data?.message ||
+        error.message ||
         "Login failed. Please check your credentials.";
       setError(message);
     } finally {
@@ -150,22 +165,40 @@ export default function AuthForms() {
         accountType: "individual",
       };
 
+      console.log("Attempting signup with:", { ...userData, password: "***" });
+
       const response = await axios.post(
         `${API_BASE_URL}/api/auth/register`,
         userData
       );
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("userRole", userRole);
-      axios.defaults.headers.common["x-auth-token"] = response.data.token;
+      console.log("Signup response:", response.data);
 
-      console.log("Signup successful, user data:", response.data.user);
-      console.log("Assigned role:", userRole);
+      if (response.data.success && response.data.token) {
+        // Store token and user data
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("userId", response.data.user.id);
+        localStorage.setItem("userRole", userRole);
+        
+        // Set axios default header for future requests
+        axios.defaults.headers.common["x-auth-token"] = response.data.token;
 
-      navigate("/customer");
+        console.log("Signup successful, user data:", response.data.user);
+        console.log("Assigned role:", userRole);
+
+        // Route to customer page
+        navigate("/customer");
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (error) {
+      console.error("Signup error:", error);
+      console.error("Error response:", error.response?.data);
+      
       const message =
-        error.response?.data?.message || "Signup failed. Please try again.";
+        error.response?.data?.message ||
+        error.message ||
+        "Signup failed. Please try again.";
       setError(message);
     } finally {
       setIsLoading(false);
